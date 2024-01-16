@@ -40,7 +40,7 @@ class Product(models.Model):
     video_file = models.FileField(upload_to='product/videos/', null= True, blank=True)
 
     # Additional attributes for filtering
-    category = models.ForeignKey(Category, on_delete = models.SET_NULL, blank=True, null=True)
+    category = models.ForeignKey(Category, on_delete = models.DO_NOTHING, blank=True, null=True)
     brand = models.CharField(max_length=255, null=True, blank=True)
     color = models.CharField(max_length=255, null=True, blank=True)
     size = models.CharField(max_length=255, null=True, blank=True)
