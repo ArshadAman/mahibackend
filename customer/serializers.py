@@ -41,3 +41,20 @@ class CustomerSerializer(ModelSerializer):
         fields = "__all__"
         
         
+class UpdateProfileSerializer(ModelSerializer):
+    user = UserSerializer()
+
+    class Meta:
+        model = models.Customer
+        fields = ['user', 'phone_number']
+        
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', {})
+        user_serializer = UserSerializer(instance.user, data=user_data, partial=True)
+        if user_serializer.is_valid():
+            user_serializer.save()
+
+        return super().update(instance, validated_data)
+
+        
+        
