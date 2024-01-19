@@ -15,7 +15,7 @@ class Attribute(models.Model):
         return self.name
 
 class Category(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique = True)
     banner = models.ImageField(upload_to='category/banner/', null=True, blank=True)
     icon = models.ImageField(upload_to='category/icon/', null=True, blank=True)
     

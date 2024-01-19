@@ -72,16 +72,57 @@ def update_profile(request):
         return Response(serializer.data)
     return Response(serializer.errors, status=400)
 
-@api_view(['PUT'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_address(request):
-    customer = request.user.customer
+    user = request.user
+    name = request.data.get('name')
+    phone_number = request.data.get('phone_number')
+    alternate_phone_number = request.data.get("phone_number")
+    city = request.data.get('city')
+    area = request.data.get('area')
+    pincode = request.data.get('pincode')
+    building_name = request.data.get('building_name')
+    landmark = request.data.get('landmark')
+    address_type = request.data.get('address_type')
     
+    if name is None or phone_number is None or alternate_phone_number is None or city is None or area is None or pincode is None or building_name is None or landmark is None or address_type is None:
+        return Response({"message": "Please ensure all the fields are filled properly"}, status=status.HTTP_406_NOT_ACCEPTABLE)
+
+    try:
+        customer = Customer.objects.filter(user = user).first()
+        if customer:
+            new_address = Address.objects.create(
+                customer = customer,
+                name = name,
+                phone_number = phone_number,
+                alternate_phone_number = alternate_phone_number,
+                city = city,
+                area = area,
+                pincode = pincode,
+                building_name = building_name,
+                landmark = landmark,
+                address_type = address_type
+            )
+            new_address.save()
+            return Response({"message": "Address saved"}, status=status.HTTP_201_CREATED)
+        return Response({"message": "No such account found"}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as error:
+        return Response({"message": str(error)}, status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def view_all_addresses(request):
+    user = request.user
+    try:
+        customer = Customer.objects.filter(user = user).first()
+        addresses = Address.objects.filter(customer = customer)
+        serialized_data = AddressSerializer(addresses, many = True).data
+        return Response(serialized_data, status=status.HTTP_200_OK)
+    except Exception as error:
+        return Response({"message": str(error)}, status=status.HTTP_400_BAD_REQUEST)
 
 def update_address(request):
-    pass
-
-def view_all_addresses(request):
     pass
 
 def add_to_cart(request):
