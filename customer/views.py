@@ -4,7 +4,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes, api_view
-from .serializers import CustomerSerializer, UpdateProfileSerializer, AddressSerializer
+from .serializers import CustomerSerializer, UpdateProfileSerializer, AddressSerializer, WishlistSerializer
+from datetime import datetime
+from products.models import Product
 
 # Create your views here.
 
@@ -63,13 +65,14 @@ def get_profile(request):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_profile(request):
-    customer = request.user.customer  # Assuming each user has a corresponding customer profile
+    user = request.user
+    customer = Customer.objects.filter(user = user).first()
 
     serializer = UpdateProfileSerializer(customer, data=request.data, partial=True)
 
     if serializer.is_valid():
         serializer.save()
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=400)
 
 @api_view(['POST'])
@@ -122,8 +125,66 @@ def view_all_addresses(request):
     except Exception as error:
         return Response({"message": str(error)}, status=status.HTTP_400_BAD_REQUEST)
 
-def update_address(request):
-    pass
+@api_view(["PUT"])
+@permission_classes[IsAuthenticated]
+def update_address(request, pk):
+    user = request.user
+    try:
+        address = Address.objects.get(id = pk)
+        if user == address.customer.user:
+            serializer = AddressSerializer(address, data = request.data, partial = True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'message': 'Sorry you are not allowed to change someone else address'}, status=400)
+    except Exception as error:
+        return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_to_wishlist(request, product_id):
+    user = request.user
+    customer = Customer.objects.filter(user = user).first()
+    product = Product.objects.get(id = product_id)
+    try:
+        wishlist = Wishlist.objects.create(
+            customer = customer,
+            product = product,
+            date_added = datetime.now()
+        )
+        wishlist.save()
+        return Response({'message': 'added to wishlist'}, status=status.HTTP_201_CREATED)
+    except Exception as error:
+        return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def view_wishlist(request):
+    user = request.user
+    customer = Customer.objects.filter(user = user).first()
+    try:
+        wishlist_items = Wishlist.objects.filter(customer = customer)
+        serializer = WishlistSerializer(wishlist_items, many = True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as error:
+        return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])    
+def remove_from_wishlist(request, pk):
+    user = request.user
+    customer = Customer.objects.filter(user = user)
+    try:
+        if(user == customer.user):
+            wishlist_item = Wishlist.objects.get(id = pk)
+            wishlist_item.delete()
+            return Response({"message": "item removed from the wishlist"}, status=status.HTTP_200_OK)
+        else:
+            return Response({'message': 'Sorry you are not allowed to change someone else wishlist'}, status=400)
+    except Exception as error:
+        return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST)    
+
 
 def add_to_cart(request):
     pass
@@ -132,12 +193,6 @@ def increase_cart_count(request):
     pass
 
 def decrease_cart_count(request):
-    pass
-
-def add_to_wishlist(request):
-    pass
-
-def remove_from_wishlist(request):
     pass
 
 def buy_from_cart(request):
