@@ -185,31 +185,85 @@ def remove_from_wishlist(request, pk):
     except Exception as error:
         return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST)    
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_to_cart(request, product_id):
+    customer = Customer.objects.filter(user = request.user).first()
+    product = Product.objects.get(id = product_id)
+    cart = Cart.objects.get_or_create(customer = customer)
+    # we have initialized a cart for the user
+    cartItem = CartItem.objects.create(
+        cart = cart,
+        product = product,
+        quantity = 1,
+        additional_price = 0,
+    )
+    cartItem.save()
+    return Response({"message": "Item added to the cart"}, status=status.HTTP_200_OK)
 
-def add_to_cart(request):
-    pass
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def increase_cart_count(request, product_id):
+    user = request.user
+    customer = Customer.objects.filter(user = user).first()
+    product = Product.objects.get(id = product_id)
+    cart = Cart.objects.filter(customer = customer).first()
+    if customer != cart.customer:
+        return Response({"message": "You are not allowed to change someones cart"}, status=status.HTTP_401_UNAUTHORIZED)
+    cartItem = CartItem.objects.filter(product = product).first()
+    if cartItem.quantity < product.quantity:
+        cartItem.quantity += 1
+        cartItem.save()
+        return Response({"message": "quantity increased"}, status=status.HTTP_200_OK)
+    else:
+        return Response({"message": "Cart Quantity cannot exceeds the product quantity"})
 
-def increase_cart_count(request):
-    pass
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def decrease_cart_count(request, product_id):
+    user = request.user
+    customer = Customer.objects.filter(user = user).first()
+    product = Product.objects.get(id = product_id)
+    cart = Cart.objects.filter(customer = customer).first()
+    if customer != cart.customer:
+        return Response({"message": "You are not allowed to change someones cart"}, status=status.HTTP_401_UNAUTHORIZED)
+    cartItem = CartItem.objects.filter(product = product).first()
+    if cartItem.quantity > 1:
+        cartItem.quantity -= 1
+        cartItem.save()
+        return Response({"message": "quantity decreased"}, status=status.HTTP_200_OK)
+    elif cartItem.quantity == 0:
+        cartItem.delete()
+        cartItem.save()
+        return Response({"message": "item removed"}, status=status.HTTP_200_OK)
+    else:
+        return Response({"message": "Cart Quantity cannot exceeds the product quantity"})
 
-def decrease_cart_count(request):
-    pass
-
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def buy_from_cart(request):
     pass
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def buy_individual(request):
     pass
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def cancel_order(request):
     pass
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def return_order(request):
     pass
 
-
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def change_password(request):
     pass
 
+@api_view(["POST"])
 def forgot_password(request):
     pass
