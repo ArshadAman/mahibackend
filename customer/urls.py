@@ -20,7 +20,7 @@ urlpatterns = [
     path('remove_from_wishlist/<uuid:pk>/', view=views.remove_from_wishlist, name='remove_from_wishlist'),
     
     path('buy_from_cart/', view=views.buy_from_cart, name='buy_from_cart'),
-    path('buy_individual/<uuid:product_id>/', view=views.buy_individual, name='buy_individual'),
+    # path('buy_individual/<uuid:product_id>/', view=views.buy_individual, name='buy_individual'),
     
     path('cancel_order/<uuid:order_item_id>/', view=views.cancel_order, name='cancel_order'),
     path('return_order/<uuid:order_item_id>/', view=views.return_order, name='return_order'),

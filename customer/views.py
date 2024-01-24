@@ -8,6 +8,9 @@ from .serializers import CustomerSerializer, UpdateProfileSerializer, AddressSer
 from django.contrib.auth import authenticate
 from products.models import Product
 from orders.models import Order, OrderItem
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from seller.models import Coupon
 
 # Create your views here.
 
@@ -127,7 +130,7 @@ def view_all_addresses(request):
         return Response({"message": str(error)}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(["PUT"])
-@permission_classes[IsAuthenticated]
+@permission_classes([IsAuthenticated])
 def update_address(request, pk):
     user = request.user
     try:
@@ -201,6 +204,8 @@ def add_to_cart(request, product_id):
         additional_price = 0,
     )
     cartItem.save()
+    cart.total_amount += cartItem.product.price
+    cart.save()
     return Response({"message": "Item added to the cart"}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
@@ -269,12 +274,38 @@ def view_cart(request):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
+def apply_coupon(request, coupon_code):
+    user = request.user
+    customer = get_object_or_404(Customer, user=user)
+    coupon = get_object_or_404(Coupon, code=coupon_code, user=user)
+    cart = Cart.objects.filter(customer = customer).first()
+
+    if coupon.is_valid():
+        discount_to_be_applied = coupon.discount_amount
+        if discount_to_be_applied > cart.total_amount:
+            return Response({'message': 'Discounted Amount can not exceeds total cart amount'}, status=status.HTTP_406_NOT_ACCEPTABLE)
+        cart.total_amount -= discount_to_be_applied
+        cart.save()
+        
+        
+        coupon.expiry_date = timezone.now()
+        coupon.save()
+
+        return Response({'message': 'Coupon applied successfully'}, status=status.HTTP_200_OK)
+    else:
+        return Response({'message': 'Coupon is not valid'}, status=status.HTTP_406_NOT_ACCEPTABLE)
+
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def buy_from_cart(request):
     try:
         customer = Customer.objects.filter(user = request.user).first()
         cart = Cart.objects.filter(customer = customer).first()
         order = Order.objects.create(customer = customer)
         order.save()
+        # ADD PAYMENT METHOD
         try:   
             for item in cart.items.all():
                 new_order_item = OrderItem.objects.create(
@@ -292,29 +323,29 @@ def buy_from_cart(request):
     except Exception as error:
         return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def buy_individual(request, product_id):
-    try:
-        customer = Customer.objects.filter(user = request.user).first()
-        cart = Cart.objects.filter(customer = customer).first()
-        product = Product.objects.get(id = product_id)
-        order = Order.objects.create(customer = customer)
-        order.save()
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def buy_individual(request, product_id):
+#     try:
+#         customer = Customer.objects.filter(user = request.user).first()
+#         cart = Cart.objects.filter(customer = customer).first()
+#         product = Product.objects.get(id = product_id)
+#         order = Order.objects.create(customer = customer)
+#         order.save()
         
-        try:
-            new_order_item = OrderItem.objects.create(
-                order = order,
-                customer = customer,
-                product = product,
-                payment_type = 'COD',
-            )
-            new_order_item.save()
-        except Exception as error:
-            order.delete()
-            return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST)
-    except Exception as error:
-        return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST)
+#         try:
+#             new_order_item = OrderItem.objects.create(
+#                 order = order,
+#                 customer = customer,
+#                 product = product,
+#                 payment_type = 'COD',
+#             )
+#             new_order_item.save()
+#         except Exception as error:
+#             order.delete()
+#             return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST)
+#     except Exception as error:
+#         return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])

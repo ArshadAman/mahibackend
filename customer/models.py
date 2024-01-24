@@ -58,6 +58,8 @@ class CartItem(models.Model):
 class Cart(models.Model):
     customer = models.OneToOneField(Customer, on_delete=models.CASCADE, related_name='cart')
     
+    total_amount = models.PositiveBigIntegerField(default=0)
+    
     id = models.UUIDField(default = uuid.uuid4, primary_key = True, editable = False)
 
     def __str__(self):
