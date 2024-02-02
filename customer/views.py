@@ -36,7 +36,6 @@ def signup(request):
             email = email,
             first_name = first_name,
             last_name = last_name,
-            phone_number = phone_number,
             password = password
         )
         new_user.save() #User created
