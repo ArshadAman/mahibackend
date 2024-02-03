@@ -17,12 +17,14 @@ from seller.models import Coupon
 @api_view(["POST"])
 def signup(request):
     if request.method == "POST":
-        username = request.data.get('username'),
-        email = request.data.get('email'),
-        first_name = request.data.get('first_name'),
-        last_name = request.data.get('last_name'),
-        phone_number = request.data.get('phone_number'),
-        password = request.data.get('password'),
+        username = request.data.get('username')
+        email = request.data.get('email')
+        first_name = request.data.get('first_name')
+        last_name = request.data.get('last_name')
+        phone_number = request.data.get('phone_number')
+        password = request.data.get('password')
+        
+        print(username)
         
         # Create User
         
@@ -30,14 +32,15 @@ def signup(request):
             return Response({"message": "Username already exists"}, status=status.HTTP_406_NOT_ACCEPTABLE)
         elif User.objects.filter(email = email).first():
             return Response({"message": "email already exists"}, status=status.HTTP_406_NOT_ACCEPTABLE)
+        print(password)
         
         new_user = User.objects.create(
             username = username,
             email = email,
             first_name = first_name,
             last_name = last_name,
-            password = password
         )
+        new_user.set_password(password)
         new_user.save() #User created
         
         # Create Customer account
