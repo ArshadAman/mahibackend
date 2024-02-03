@@ -2,8 +2,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import permission_classes, api_view
 from rest_framework.permissions import IsAdminUser
-from .models import Category, Product
-from .serializers import CategorySerializer, ProductSerializer, AttributeSerializer
+from .models import Category, Product, Brand
+from .serializers import CategorySerializer, ProductSerializer, AttributeSerializer, BrandSerializer
 
 
 @api_view(["POST"])
@@ -35,11 +35,19 @@ def delete_category(request, pk):
         return Response({'messsage': str(e)})
     
 @api_view(['GET'])
-@permission_classes([IsAdminUser])
 def all_category(request):
     try:
         all_categories = Category.objects.all()
         serialized_data = CategorySerializer(all_categories, many=True).data
+        return Response({"message": serialized_data}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'messsage': str(e)})
+    
+@api_view(['GET'])
+def all_brands(request):
+    try:
+        brands = Brand.objects.all()
+        serialized_data = BrandSerializer(brands, many=True).data
         return Response({"message": serialized_data}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'messsage': str(e)})

@@ -23,6 +23,12 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name
+    
+class Brand(models.Model):
+    name = models.CharField(max_length = 100, default = "Generic")
+    logo = models.ImageField(upload_to="brand/logo", null=True, blank=True)
+    
+    id = models.UUIDField(default = uuid.uuid4, primary_key = True, editable = False)
 
 
 class Product(models.Model):
@@ -41,7 +47,7 @@ class Product(models.Model):
 
     # Additional attributes for filtering
     category = models.ForeignKey(Category, on_delete = models.DO_NOTHING, blank=True, null=True)
-    brand = models.CharField(max_length=255, null=True, blank=True)
+    brand = models.ForeignKey(Brand, on_delete = models.CASCADE, null = True)
     color = models.CharField(max_length=255, null=True, blank=True)
     size = models.CharField(max_length=255, null=True, blank=True)
     is_featured = models.BooleanField(default=False)
@@ -57,3 +63,8 @@ class Product(models.Model):
     
     
     id = models.UUIDField(default = uuid.uuid4, primary_key = True, editable = False)
+    
+    def __str__(self):
+        return self.name
+    
+    
