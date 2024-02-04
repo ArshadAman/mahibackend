@@ -1,9 +1,10 @@
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, generics
 from rest_framework.decorators import permission_classes, api_view
 from rest_framework.permissions import IsAdminUser
 from .models import Category, Product, Brand
 from .serializers import CategorySerializer, ProductSerializer, AttributeSerializer, BrandSerializer
+from .filter import ProductFilter
 
 
 @api_view(["POST"])
@@ -52,3 +53,9 @@ def all_brands(request):
     except Exception as e:
         return Response({'messsage': str(e)})
     
+    
+    
+class ProductList(generics.ListAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    filterset_class = ProductFilter
