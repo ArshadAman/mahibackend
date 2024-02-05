@@ -59,3 +59,12 @@ class ProductList(generics.ListAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     filterset_class = ProductFilter
+
+@api_view(['GET'])    
+def product_details(request, id):
+    try:
+        product = Product.objects.get(id = id)
+        serialized_data = ProductSerializer(product).data
+        return Response({"message":serialized_data}, status=status.HTTP_200_OK)
+    except Exception as error:
+        return Response({"message": str(error)})

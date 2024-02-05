@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     # IMPORTANT PROJECT APPLICATION
     'rest_framework',
     'rest_framework_simplejwt',
+    'django_filters',
     
     
     
@@ -143,7 +144,8 @@ MEDIA_URL = '/media/'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
 }
 
 
