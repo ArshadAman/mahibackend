@@ -1,5 +1,6 @@
 from django.db import models
 import uuid
+from ckeditor_uploader.fields import RichTextUploadingField
 
 # Create your models here.
 
@@ -36,7 +37,7 @@ class Product(models.Model):
     price = models.IntegerField(default = 0)
     mrp = models.IntegerField(default = 0)
     quantity = models.IntegerField(default=0)
-    description = models.TextField(null = True, blank = True)
+    description = RichTextUploadingField(blank=True, null=True)
     image1 = models.ImageField(upload_to='product/', null=True, blank=True)
     image2 = models.ImageField(upload_to='product/', null=True, blank=True)
     image3 = models.ImageField(upload_to='product/', null=True, blank=True)

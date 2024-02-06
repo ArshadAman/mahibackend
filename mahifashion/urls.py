@@ -15,4 +15,7 @@ urlpatterns = [
     path('api/orders/', include('orders.urls')),
     path('api/products/', include('products.urls')),
     path('api/seller/', include('seller.urls')),
+    
+    # CK EDITOR
+    path('ckeditor/', include('ckeditor_uploader.urls')),
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
