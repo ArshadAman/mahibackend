@@ -10,10 +10,9 @@ class Coupon(models.Model):
     product = models.ForeignKey('products.Product', on_delete=models.CASCADE)
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2)
     expiry_date = models.DateTimeField()
-    
+
     def __str__(self) -> str:
-        f'{self.user.username} - {self.code}'
-    
+        return f'{self.user.username} - {self.code}'
+
     def is_valid(self):
         return self.expiry_date > timezone.now()
-    

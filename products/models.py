@@ -9,7 +9,7 @@ class Attribute(models.Model):
     name = models.CharField(max_length=255)
     value = models.CharField(max_length = 255)
     price = models.IntegerField(default = 0)
-    
+
     id = models.UUIDField(default = uuid.uuid4, primary_key = True, editable = False)
 
     def __str__(self):
@@ -19,16 +19,16 @@ class Category(models.Model):
     name = models.CharField(max_length=255, unique = True)
     banner = models.ImageField(upload_to='category/banner/', null=True, blank=True)
     icon = models.ImageField(upload_to='category/icon/', null=True, blank=True)
-    
+
     id = models.UUIDField(default = uuid.uuid4, primary_key = True, editable = False)
 
     def __str__(self):
         return self.name
-    
+
 class Brand(models.Model):
     name = models.CharField(max_length = 100, default = "Generic")
     logo = models.ImageField(upload_to="brand/logo", null=True, blank=True)
-    
+
     id = models.UUIDField(default = uuid.uuid4, primary_key = True, editable = False)
 
 
@@ -52,20 +52,20 @@ class Product(models.Model):
     color = models.CharField(max_length=255, null=True, blank=True)
     size = models.CharField(max_length=255, null=True, blank=True)
     is_featured = models.BooleanField(default=False)
-    
+
     attributes = models.ManyToManyField(Attribute)
-    
+
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    added_to_wihslist = models.BooleanField(default=False)
+
     class Meta:
         ordering = ("-created_at",)
-    
-    
+
+
     id = models.UUIDField(default = uuid.uuid4, primary_key = True, editable = False)
-    
+
     def __str__(self):
         return self.name
-    
-    

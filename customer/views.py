@@ -1,10 +1,10 @@
 from django.contrib.auth.models import User
-from .models import Customer, Address, Cart, CartItem, Wishlist
+from .models import Customer, Address, Cart, CartItem, Wishlist, WishlistItem
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes, api_view
-from .serializers import CustomerSerializer, UpdateProfileSerializer, AddressSerializer, WishlistSerializer, CartItemSerializer
+from .serializers import CustomerSerializer, UpdateProfileSerializer, AddressSerializer, WishlistItemSerializer, CartItemSerializer, WishlistSerializer
 from django.contrib.auth import authenticate
 from products.models import Product
 from orders.models import Order, OrderItem
@@ -23,17 +23,17 @@ def signup(request):
         last_name = request.data.get('last_name')
         phone_number = request.data.get('phone_number')
         password = request.data.get('password')
-        
+
         print(username)
-        
+
         # Create User
-        
+
         if User.objects.filter(username = username).first():
             return Response({"message": "Username already exists"}, status=status.HTTP_406_NOT_ACCEPTABLE)
         elif User.objects.filter(email = email).first():
             return Response({"message": "email already exists"}, status=status.HTTP_406_NOT_ACCEPTABLE)
         print(password)
-        
+
         new_user = User.objects.create(
             username = username,
             email = email,
@@ -42,7 +42,7 @@ def signup(request):
         )
         new_user.set_password(password)
         new_user.save() #User created
-        
+
         # Create Customer account
         if Customer.objects.filter(user = new_user).first():
             return Response({"message": "User already exists"}, status=status.HTTP_406_NOT_ACCEPTABLE)
@@ -51,7 +51,7 @@ def signup(request):
             phone_number = phone_number
         )
         new_customer.save()
-        
+
         return Response({"message": "successfully sigined up"}, status=status.HTTP_201_CREATED)
 
 @api_view(["GET"])
@@ -94,7 +94,7 @@ def add_address(request):
     building_name = request.data.get('building_name')
     landmark = request.data.get('landmark')
     address_type = request.data.get('address_type')
-    
+
     if name is None or phone_number is None or alternate_phone_number is None or city is None or area is None or pincode is None or building_name is None or landmark is None or address_type is None:
         return Response({"message": "Please ensure all the fields are filled properly"}, status=status.HTTP_406_NOT_ACCEPTABLE)
 
@@ -118,7 +118,7 @@ def add_address(request):
         return Response({"message": "No such account found"}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as error:
         return Response({"message": str(error)}, status=status.HTTP_400_BAD_REQUEST)
-    
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def view_all_addresses(request):
@@ -155,12 +155,15 @@ def add_to_wishlist(request, product_id):
     user = request.user
     customer = Customer.objects.filter(user = user).first()
     product = Product.objects.get(id = product_id)
+    wishlist, created = Wishlist.objects.get_or_create(customer = customer)
     try:
-        wishlist = Wishlist.objects.create(
-            customer = customer,
+        wishlist_item = WishlistItem.objects.create(
+            wishlist = wishlist,
             product = product,
         )
-        wishlist.save()
+        wishlist_item.save()
+        product.added_to_wihslist = True
+        product.save()
         return Response({'message': 'added to wishlist'}, status=status.HTTP_201_CREATED)
     except Exception as error:
         return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST)
@@ -170,34 +173,36 @@ def add_to_wishlist(request, product_id):
 def view_wishlist(request):
     user = request.user
     customer = Customer.objects.filter(user = user).first()
+    wishlist = Wishlist.objects.filter(customer = customer).first()
     try:
-        wishlist_items = Wishlist.objects.filter(customer = customer)
-        serializer = WishlistSerializer(wishlist_items, many = True)
+        wishlist_items = wishlist.wishlist_items.all()
+        serializer = WishlistItemSerializer(wishlist_items, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     except Exception as error:
         return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])    
+@permission_classes([IsAuthenticated])
 def remove_from_wishlist(request, pk):
     user = request.user
-    customer = Customer.objects.filter(user = user)
+    customer = Customer.objects.filter(user = user).first()
+    wishlist = Wishlist.objects.filter(customer = customer).first()
     try:
-        if(user == customer.user):
-            wishlist_item = Wishlist.objects.get(id = pk)
+        if(user == wishlist.customer.user):
+            wishlist_item = WishlistItem.objects.get(id = pk)
             wishlist_item.delete()
             return Response({"message": "item removed from the wishlist"}, status=status.HTTP_200_OK)
         else:
             return Response({'message': 'Sorry you are not allowed to change someone else wishlist'}, status=400)
     except Exception as error:
-        return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST)    
+        return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_to_cart(request, product_id):
     customer = Customer.objects.filter(user = request.user).first()
     product = Product.objects.get(id = product_id)
-    cart = Cart.objects.get_or_create(customer = customer)
+    cart, created = Cart.objects.get_or_create(customer = customer)
     # we have initialized a cart for the user
     cartItem = CartItem.objects.create(
         cart = cart,
@@ -212,49 +217,53 @@ def add_to_cart(request, product_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def increase_cart_count(request, product_id):
+def increase_cart_count(request, cart_item_id):
     user = request.user
     customer = Customer.objects.filter(user = user).first()
-    product = Product.objects.get(id = product_id)
+    # product = Product.objects.get(id = product_id)
     cart = Cart.objects.filter(customer = customer).first()
     if customer != cart.customer:
         return Response({"message": "You are not allowed to change someones cart"}, status=status.HTTP_401_UNAUTHORIZED)
-    cartItem = CartItem.objects.filter(product = product).first()
-    if cartItem.quantity < product.quantity:
+    cartItem = CartItem.objects.get(id = cart_item_id)
+    if cartItem.quantity < cartItem.product.quantity:
         cartItem.quantity += 1
+        cart.total_amount += cartItem.product.price
         cartItem.save()
+        cart.save()
         return Response({"message": "quantity increased"}, status=status.HTTP_200_OK)
     else:
         return Response({"message": "Cart Quantity cannot exceeds the product quantity"})
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def decrease_cart_count(request, product_id):
+def decrease_cart_count(request, cart_item_id):
     user = request.user
     customer = Customer.objects.filter(user = user).first()
-    product = Product.objects.get(id = product_id)
+    # product = Product.objects.get(id = product_id)
     cart = Cart.objects.filter(customer = customer).first()
     if customer != cart.customer:
         return Response({"message": "You are not allowed to change someones cart"}, status=status.HTTP_401_UNAUTHORIZED)
-    cartItem = CartItem.objects.filter(product = product).first()
+    cartItem = CartItem.objects.get(id = cart_item_id)
     if cartItem.quantity > 1:
         cartItem.quantity -= 1
+        cart.total_amount -= cartItem.product.price
         cartItem.save()
+        cart.save()
         return Response({"message": "quantity decreased"}, status=status.HTTP_200_OK)
-    elif cartItem.quantity == 0:
+    elif cartItem.quantity == 1:
+        cart.total_amount -= cartItem.product.price
         cartItem.delete()
-        cartItem.save()
+        cart.save()
         return Response({"message": "item removed"}, status=status.HTTP_200_OK)
-    else:
-        return Response({"message": "Cart Quantity cannot exceeds the product quantity"})
+    # else:
+    #     return Response({"message": "Cart Quantity cannot exceeds the product quantity"})
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def view_cart(request):
     # Assuming each user has a corresponding customer profile
-    
-    try:  
-        customer = request.user.customer
+    try:
+        customer = get_object_or_404(Customer, user = request.user)
         cart = Cart.objects.filter(customer = customer).first()
 
         # Accessing all cart items through the Cart model
@@ -263,14 +272,13 @@ def view_cart(request):
         serialized_data = CartItemSerializer(cart_items, many = True)
 
         # Customize the response based on your needs
-        # response_data = {
-        #     'cart_id': str(cart.id),
-        #     'cart_items': serialized_cart_items,
-        #     'customer_id': str(customer.id),
-        #     'customer_username': customer.user.username,
-        # }
+        response_data = {
+            'cart_id': str(cart.id),
+            'cart_items': serialized_data.data,
+            'total_cart_value': cart.total_amount
+        }
 
-        return Response(serialized_data.data, status=status.HTTP_200_OK)
+        return Response(response_data, status=status.HTTP_200_OK)
     except Exception as error:
         return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -288,8 +296,7 @@ def apply_coupon(request, coupon_code):
             return Response({'message': 'Discounted Amount can not exceeds total cart amount'}, status=status.HTTP_406_NOT_ACCEPTABLE)
         cart.total_amount -= discount_to_be_applied
         cart.save()
-        
-        
+
         coupon.expiry_date = timezone.now()
         coupon.save()
 
@@ -308,7 +315,7 @@ def buy_from_cart(request):
         order = Order.objects.create(customer = customer)
         order.save()
         # ADD PAYMENT METHOD
-        try:   
+        try:
             for item in cart.items.all():
                 new_order_item = OrderItem.objects.create(
                     order = order,
@@ -334,7 +341,7 @@ def buy_from_cart(request):
 #         product = Product.objects.get(id = product_id)
 #         order = Order.objects.create(customer = customer)
 #         order.save()
-        
+
 #         try:
 #             new_order_item = OrderItem.objects.create(
 #                 order = order,
@@ -356,31 +363,31 @@ def cancel_order(request, order_item_id):
     try:
         order_item = OrderItem.objects.get(id = order_item_id)
         customer = Customer.objects.filter(user = request.user)
-        
+
         if customer != order_item.customer:
             return Response({'message': 'you are not allowed to make changes to this order'}, status=status.HTTP_401_UNAUTHORIZED)
-        
+
         order_item.status =  "CANCELED"
         order_item.save()
         return Response({'message': f'your order with order_id {order_item.id} has been canceled as per your request'}, status=status.HTTP_200_OK)
-    
+
     except Exception as error:
         return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST)
-    
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def return_order(request, order_item_id):
     try:
         order_item = OrderItem.objects.get(id = order_item_id)
         customer = Customer.objects.filter(user = request.user)
-        
+
         if customer != order_item.customer:
             return Response({'message': 'you are not allowed to make changes to this order'}, status=status.HTTP_401_UNAUTHORIZED)
-        
+
         order_item.status =  "RETURN-REQUESTED"
         order_item.save()
         return Response({'message': f'your order with order_id {order_item.id} is requested for return, you will get your money back once the return is completed'}, status=status.HTTP_200_OK)
-    
+
     except Exception as error:
         return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -390,17 +397,17 @@ def change_password(request):
     current_user = request.user
     current_password = request.data.get('current_password')
     new_password = request.data.get('new_password')
-    
+
     try:
        user = authenticate(current_user.username, current_password)
        if user:
            user.password = new_password
            user.save()
-           return Response({"message": "Password Changed"}, status=status.HTTP_401_UNAUTHORIZED) 
+           return Response({"message": "Password Changed"}, status=status.HTTP_401_UNAUTHORIZED)
        else:
            return Response({"message": "Authentication failed"}, status=status.HTTP_401_UNAUTHORIZED)
     except Exception as error:
-        return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST) 
+        return Response({'message': str(error)}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(["POST"])
 def forgot_password(request):
