@@ -251,7 +251,8 @@ def decrease_cart_count(request, cart_item_id):
         cart.save()
         return Response({"message": "quantity decreased"}, status=status.HTTP_200_OK)
     elif cartItem.quantity == 1:
-        cart.total_amount -= cartItem.product.price
+        if cart.total_amount is not 0:
+            cart.total_amount -= cartItem.product.price
         cartItem.delete()
         cart.save()
         return Response({"message": "item removed"}, status=status.HTTP_200_OK)
